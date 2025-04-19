@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTA Tracker</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+    <script src="firebase.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Seção de Login e Signup -->
+    <div id="authSection" class="auth-container">
+        <h1>GTA Tracker</h1>
+
+        <!-- Login Form -->
+        <div id="loginFormContainer">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <input type="email" id="loginEmail" placeholder="Email" required />
+                <input type="password" id="loginPassword" placeholder="Senha" required />
+                <button type="submit">Entrar</button>
+            </form>
+            <p id="loginError"></p>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupFormContainer" style="display: none;">
+            <h2>Cadastro</h2>
+            <form id="signupForm">
+                <input type="email" id="signupEmail" placeholder="Email" required />
+                <input type="password" id="signupPassword" placeholder="Senha" required />
+                <button type="submit">Cadastrar</button>
+            </form>
+            <p id="signupError"></p>
+        </div>
+
+        <button id="toggleSignupBtn">Não tem uma conta? Cadastre-se</button>
+    </div>
+
+    <!-- Seção de Dados do Usuário, exibida quando o usuário está logado -->
+    <div id="trackerSection" class="tracker-container" style="display: none;">
+        <h1>Bem-vindo ao GTA Tracker</h1>
+        <div id="userInfo">
+            <p>Carregando dados...</p>
+        </div>
+
+        <div id="stats">
+            <h2>Estatísticas do Jogador</h2>
+            <p>Dinheiro: <span id="money">0</span></p>
+            <p>Missões Completas: <span id="missions">0</span></p>
+            <p>Veículos Adquiridos: <span id="vehicles">0</span></p>
+        </div>
+
+        <button id="logoutBtn">Sair</button>
+    </div>
+
+    <script>
+        // Inicializando o Firebase com as suas credenciais
+        const firebaseConfig = {
+            apiKey: "AIzaSyA91AoWZFOG1EbLz6p5OjfJd-Us-S9x4YQ",
+            authDomain: "gta-tracker-67774.firebaseapp.com",
+            projectId: "gta-tracker-67774",
+            storageBucket: "gta-tracker-67774.firebasestorage.app",
+            messagingSenderId: "2917447473",
+            appId: "1:2917447473:web:9e1700160ef16c065fa210",
+            measurementId: "G-MZLXKY3XMH"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Função para alternar entre as telas de login e cadastro
+        const toggleSignupForm = () => {
+            const loginFormContainer = document.getElementById('loginFormContainer');
+            const signupFormContainer = document.getElementById('signupFormContainer');
+            const toggleSignupBtn = document.getElementById('toggleSignupBtn');
+
+            if (signupFormContainer.style.display === 'none') {
+                signupFormContainer.style.display = 'block';
+                loginFormContainer.style.display = 'none';
+                toggleSignupBtn.innerText = 'Já tem uma conta? Entre';
+            } else {
+                signupFormContainer.style.display = 'none';
+                loginFormContainer.style.display = 'block';
+                toggleSignupBtn.innerText = 'Não tem uma conta? Cadastre-se';
+            }
+        };
+
+        // Alternar para a tela de Signup ao clicar
+        document.getElementById('toggleSignupBtn').addEventListener('click', toggleSignupForm);
+
+        // Verifica o estado de autenticação do usuário
+        auth.onAuthStateChanged(function(user) {
+            const authSection = document.getElementById('authSection');
+            const trackerSection = document.getElementById('trackerSection');
+
+            if (user) {
+                // Se o usuário estiver autenticado
+                authSection.style.display = 'none';
+                trackerSection.style.display = 'block';
+
+                // Carregar dados do usuário a partir do banco de dados
+                const userRef = database.ref('users/' + user.uid);
+                userRef.once('value', function(snapshot) {
+                    const data = snapshot.val();
+                    document.getElementById('money').innerText = data.money || 0;
+                    document.getElementById('missions').innerText = data.missions || 0;
+                    document.getElementById('vehicles').innerText = data.vehicles || 0;
+                });
+            } else {
+                // Se o usuário não estiver logado
+                authSection.style.display = 'block';
+                trackerSection.style.display = 'none';
+            }
+        });
+
+        // Lógica de login
+        const loginForm = document.getElementById('loginForm');
+        const loginEmailInput = document.getElementById('loginEmail');
+        const loginPasswordInput = document.getElementById('loginPassword');
+        const loginError = document.getElementById('loginError');
+
+        loginForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const email = loginEmailInput.value;
+            const password = loginPasswordInput.value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Login bem-sucedido
+                    window.location.reload(); // Recarrega a página
+                })
+                .catch((error) => {
+                    // Exibe erro caso a autenticação falhe
+                    const errorMessage = error.message;
+                    loginError.textContent = `Erro: ${errorMessage}`;
+                });
+        });
+
+        // Lógica de signup
+        const signupForm = document.getElementById('signupForm');
+        const signupEmailInput = document.getElementById('signupEmail');
+        const signupPasswordInput = document.getElementById('signupPassword');
+        const signupError = document.getElementById('signupError');
+
+        signupForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const email = signupEmailInput.value;
+            const password = signupPasswordInput.value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Cadastro bem-sucedido
+                    window.location.reload(); // Recarrega a página
+                })
+                .catch((error) => {
+                    // Exibe erro caso o cadastro falhe
+                    const errorMessage = error.message;
+                    signupError.textContent = `Erro: ${errorMessage}`;
+                });
+        });
+
+        // Lógica de logout
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            auth.signOut().then(function() {
+                window.location.reload(); // Recarrega a página após o logout
+            });
+        });
+    </script>
+</body>
+</html>
